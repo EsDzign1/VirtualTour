@@ -3,12 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>360° Virtual Tour Viewer & Studio</title>
-    <meta name="description" content="Interactive 360-degree virtual tour viewer and creator with interactive navigation hotspots, rich media cards, and embedded video integration inspired by Theasys." />
-    <meta property="og:title" content="360° Virtual Tour Viewer & Studio" />
-    <meta property="og:description" content="Interactive 360-degree virtual tour viewer and creator with interactive navigation hotspots, rich media cards, and embedded video integration inspired by Theasys." />
+    <title>VR</title>
+    <meta name="description" content="Interactive virtual tour viewer and creator with interactive navigation hotspots, rich media cards, and embedded video integration" />
+    <meta property="og:title" content="VR" />
+    <meta property="og:description" content="Interactive virtual tour viewer and creator with interactive navigation hotspots, rich media cards, and embedded video integration" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Ensure trailing slash on GitHub Pages directory URLs so relative paths (./assets/...) resolve properly
+      if (
+        window.location.pathname &&
+        !window.location.pathname.endsWith('/') &&
+        !window.location.pathname.split('/').pop().includes('.')
+      ) {
+        window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

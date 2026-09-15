@@ -44,6 +44,7 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
   const [projectedHotspots, setProjectedHotspots] = useState<
     Record<string, { x: number; y: number; visible: boolean }>
   >({});
+  const [webglError, setWebglError] = useState<string | null>(null);
 
   // Three.js internal references
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -125,32 +126,42 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     const camera = new THREE.PerspectiveCamera(orientationRef.current.fov, width / height, 1, 1100);
     cameraRef.current = camera;
 
-    // WebGL Renderer
-    const renderer = new THREE.WebGLRenderer({
-      canvas: canvasRef.current,
-      antialias: true,
-      powerPreference: 'high-performance',
-    });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    rendererRef.current = renderer;
+    let renderer: THREE.WebGLRenderer | null = null;
+    let geometry: THREE.SphereGeometry | null = null;
+    let material: THREE.MeshBasicMaterial | null = null;
 
-    // Inverted sphere for 360 equirectangular projection
-    const geometry = new THREE.SphereGeometry(500, 64, 32);
-    // Invert geometry so faces point inward
-    geometry.scale(-1, 1, 1);
+    try {
+      // WebGL Renderer
+      renderer = new THREE.WebGLRenderer({
+        canvas: canvasRef.current,
+        antialias: true,
+        powerPreference: 'high-performance',
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      rendererRef.current = renderer;
 
-    const material = new THREE.MeshBasicMaterial();
-    const sphereMesh = new THREE.Mesh(geometry, material);
-    scene.add(sphereMesh);
-    sphereMeshRef.current = sphereMesh;
+      // Inverted sphere for 360 equirectangular projection
+      geometry = new THREE.SphereGeometry(500, 64, 32);
+      geometry.scale(-1, 1, 1);
 
-    // Initial texture load
-    loadSceneTexture(currentScene, (tex) => {
-      material.map = tex;
-      material.needsUpdate = true;
-    });
+      material = new THREE.MeshBasicMaterial();
+      const sphereMesh = new THREE.Mesh(geometry, material);
+      scene.add(sphereMesh);
+      sphereMeshRef.current = sphereMesh;
+
+      // Initial texture load
+      loadSceneTexture(currentScene, (tex) => {
+        material!.map = tex;
+        material!.needsUpdate = true;
+      });
+    } catch (err: unknown) {
+      console.error('Failed to initialize WebGL context:', err);
+      const errMsg = err instanceof Error ? err.message : 'WebGL not supported';
+      setWebglError(errMsg);
+      return;
+    }
 
     // ResizeObserver
     const resizeObserver = new ResizeObserver((entries) => {
@@ -170,9 +181,9 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
-      renderer.dispose();
-      geometry.dispose();
-      material.dispose();
+      if (renderer) renderer.dispose();
+      if (geometry) geometry.dispose();
+      if (material) material.dispose();
     };
   }, []);
 
@@ -358,6 +369,25 @@ export const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     >
       {/* Three.js WebGL Canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
+
+      {/* WebGL Error fallback */}
+      {webglError && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-neutral-950/95 p-6 text-center text-white">
+          <div className="max-w-md rounded-2xl border border-amber-500/40 bg-amber-950/20 p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-amber-400 mb-2">WebGL Unavailable</h2>
+            <p className="text-xs text-neutral-300 mb-4 leading-relaxed">
+              Your browser or graphics hardware could not initialize WebGL: {webglError}.
+              Please check if hardware acceleration is enabled in browser settings.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Crosshair indicator if in hotspot placing mode */}
       {isPlacingHotspot && (
