@@ -1,12 +1,31 @@
 import { TourData } from '../types/tour';
 import { generateProceduralEquirectangular } from '../utils/panoramaHelper';
 
-// Fallback procedural equirectangular panoramas for instant offline-safe 360 rendering
-const livingFallback = generateProceduralEquirectangular('living');
-const kitchenFallback = generateProceduralEquirectangular('kitchen');
-const terraceFallback = generateProceduralEquirectangular('terrace');
-const masterFallback = generateProceduralEquirectangular('master');
-const theaterFallback = generateProceduralEquirectangular('theater');
+// Lazy procedural equirectangular panoramas for instant offline-safe 360 rendering
+const fallbackCache: Record<string, string> = {};
+
+export function getFallbackPanorama(sceneId: string): string {
+  if (fallbackCache[sceneId]) return fallbackCache[sceneId];
+  const typeMap: Record<string, 'living' | 'kitchen' | 'terrace' | 'master' | 'theater'> = {
+    'scene-living': 'living',
+    'scene-kitchen': 'kitchen',
+    'scene-terrace': 'terrace',
+    'scene-master': 'master',
+    'scene-theater': 'theater',
+  };
+  const type = typeMap[sceneId] || 'living';
+  try {
+    fallbackCache[sceneId] = generateProceduralEquirectangular(type);
+  } catch (e) {
+    console.warn('Could not generate procedural fallback panorama:', e);
+    fallbackCache[sceneId] = '';
+  }
+  return fallbackCache[sceneId];
+}
+
+export const FALLBACK_PANORAMAS: Record<string, string> = new Proxy({}, {
+  get: (_target, prop: string) => getFallbackPanorama(prop),
+});
 
 export const DEFAULT_TOUR: TourData = {
   id: 'tour-villa-lumina-360',
@@ -373,13 +392,4 @@ export const DEFAULT_TOUR: TourData = {
       ],
     },
   ],
-};
-
-// Fallback lookup dictionary
-export const FALLBACK_PANORAMAS: Record<string, string> = {
-  'scene-living': livingFallback,
-  'scene-kitchen': kitchenFallback,
-  'scene-terrace': terraceFallback,
-  'scene-master': masterFallback,
-  'scene-theater': theaterFallback,
 };
